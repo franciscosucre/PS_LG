@@ -1,0 +1,216 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Devo Code Challenge</title>
+
+    <style type="text/css">
+    </style>
+</head>
+
+<body>
+    <script src="jquery.min.js"></script>
+    <script src="Highcharts-6.1.1/code/highcharts.js"></script>
+    <script src="Highcharts-6.1.1/code/modules/exporting.js"></script>
+    <script src="Highcharts-6.1.1/code/modules/export-data.js"></script>
+    <script src="data_processing.js"></script>
+
+    <div id="pie" style="min-width: 310px; height: 400px; max-width: 600px; margin: 0 auto"></div>
+    <div id="line" style="min-width: 310px; height: 400px; max-width: 600px; margin: 0 auto"></div>
+    <script type="text/javascript">
+        const dateRegex = /[0-9]{4}-[0-9]{2}-[0-9]{2}/;
+        const catRegex = /#(cat) ([A-Za-z0-9]+)#/i;
+        var filesLoaded = 0;
+        var totalData = [];
+        var categoryTotals = [];
+
+
+        function normalize_entry(procesadas, entrada) {
+            var date;
+            var category;
+            var value;
+            /* Data normalization */
+            if ("cat" in entrada) {
+                date = entrada.d;
+                category = entrada.cat.toUpperCase();
+                value = entrada.value;
+            } else if ("categ" in entrada) {
+                date = new Date(entrada.myDate).getTime();
+                category = entrada.categ.toUpperCase();
+                value = entrada.val;
+            } else if ("raw" in entrada) {
+                const raw = entrada.raw;
+                date = new Date(dateRegex.exec(raw)[0]).getTime();
+                const result = catRegex.exec(raw);
+                category = result[1] + ' ' + result[2];
+                value = entrada.val;
+            }
+            /* We verify if the category already exists */
+            const coincidencias = procesadas.filter(procesada => procesada.category == category)
+            if (coincidencias.length >= 1) {
+                coincidencia = coincidencias[0];
+                if (coincidencia.date == date) {
+                    coincidencia.value += value;
+                }
+                categoryTotals[category] += value;
+            } else {
+                procesadas.push({
+                    date: date,
+                    category: category,
+                    value: value
+                })
+                categoryTotals[category] = value;
+            }
+            return procesadas;
+        }
+
+        function normalize_series(data) {
+            var resultado = data.reduce(normalize_entry, []);
+            console.log("resultado: ", resultado);
+            return resultado;
+        }
+
+
+        function uploadHandler(data) {
+            if (!Array.isArray(data)) {
+                data = [data]
+            }
+            data = normalize_series(data);
+            totalData = totalData.concat(data);
+            filesLoaded += 1;
+            console.log("totalData: ", totalData)
+            console.log("filesLoaded: ", filesLoaded)
+            if (filesLoaded == 3) {
+                const pieData = [];
+                for (const key in categoryTotals) {
+                    if (categoryTotals.hasOwnProperty(key)) {
+                        pieData.push(categoryTotals[key]);
+                    }
+                }
+                console.log("categoryTotals: ", categoryTotals)
+                console.log("pieData: ", pieData)
+                Highcharts.chart('pie', {
+                    chart: {
+                        plotBackgroundColor: null,
+                        plotBorderWidth: null,
+                        plotShadow: false,
+                        type: 'pie'
+                    },
+                    title: {
+                        text: 'Browser market shares in January, 2018'
+                    },
+                    tooltip: {
+                        pointFormat: '{series.name}: <b>{point.percentage:.1f}%</b>'
+                    },
+                    plotOptions: {
+                        pie: {
+                            allowPointSelect: true,
+                            cursor: 'pointer',
+                            dataLabels: {
+                                enabled: true,
+                                format: '<b>{point.name}</b>: {point.percentage:.1f} %',
+                                style: {
+                                    color: (Highcharts.theme && Highcharts.theme.contrastTextColor) || 'black'
+                                }
+                            }
+                        }
+                    },
+                    series: [{
+                        name: 'Brands',
+                        colorByPoint: true,
+                        data: pieData
+                    }]
+                });
+
+                Highcharts.chart('line', {
+
+                    title: {
+                        text: 'Solar Employment Growth by Sector, 2010-2016'
+                    },
+
+                    subtitle: {
+                        text: 'Source: thesolarfoundation.com'
+                    },
+
+                    yAxis: {
+                        title: {
+                            text: 'Number of Employees'
+                        }
+                    },
+                    legend: {
+                        layout: 'vertical',
+                        align: 'right',
+                        verticalAlign: 'middle'
+                    },
+
+                    plotOptions: {
+                        series: {
+                            label: {
+                                connectorAllowed: false
+                            },
+                            pointStart: 2010
+                        }
+                    },
+
+                    series: [{
+                        name: 'Installation',
+                        data: [43934, 52503, 57177, 69658, 97031, 119931, 137133, 154175]
+                    }, {
+                        name: 'Manufacturing',
+                        data: [24916, 24064, 29742, 29851, 32490, 30282, 38121, 40434]
+                    }, {
+                        name: 'Sales & Distribution',
+                        data: [11744, 17722, 16005, 19771, 20185, 24377, 32147, 39387]
+                    }, {
+                        name: 'Project Development',
+                        data: [null, null, 7988, 12169, 15112, 22452, 34400, 34227]
+                    }, {
+                        name: 'Other',
+                        data: [12908, 5948, 8105, 11248, 8989, 11816, 18274, 18111]
+                    }],
+
+                    responsive: {
+                        rules: [{
+                            condition: {
+                                maxWidth: 500
+                            },
+                            chartOptions: {
+                                legend: {
+                                    layout: 'horizontal',
+                                    align: 'center',
+                                    verticalAlign: 'bottom'
+                                }
+                            }
+                        }]
+                    }
+
+                });
+            }
+        }
+
+        $(document).ready(function () {
+            $.ajax({
+                dataType: "json",
+                url: "data/data1.json",
+                mimeType: "application/json",
+                success: uploadHandler
+            });
+            $.ajax({
+                dataType: "json",
+                url: "data/data2.json",
+                mimeType: "application/json",
+                success: uploadHandler
+            });
+            $.ajax({
+                dataType: "json",
+                url: "data/data3.json",
+                mimeType: "application/json",
+                success: uploadHandler
+            });
+        });
+    </script>
+</body>
+
+</html>
