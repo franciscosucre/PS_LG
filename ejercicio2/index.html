@@ -16,10 +16,10 @@
     <script src="Highcharts-6.1.1/code/modules/exporting.js"></script>
     <script src="Highcharts-6.1.1/code/modules/export-data.js"></script>
     <script src="data_processing.js"></script>
-
     <div id="pie" style="min-width: 310px; height: 400px; max-width: 600px; margin: 0 auto"></div>
     <div id="line" style="min-width: 310px; height: 400px; max-width: 600px; margin: 0 auto"></div>
     <script type="text/javascript">
+        /* We initialize our common variables */
         const dateRegex = /[0-9]{4}-[0-9]{2}-[0-9]{2}/;
         const catRegex = /#(cat) ([A-Za-z0-9]+)#/i;
         var filesLoaded = 0;
@@ -28,87 +28,81 @@
         var pieData = [];
         var lineSeries = [];
 
-
-        function normalize_entry(procesadas, entrada) {
-            var date;
-            var category;
-            var value;
-            /* Data normalization */
-            if ("cat" in entrada) {
-                date = entrada.d;
-                category = entrada.cat.toUpperCase();
-                value = entrada.value;
-            } else if ("categ" in entrada) {
-                date = new Date(entrada.myDate).getTime();
-                category = entrada.categ.toUpperCase();
-                value = entrada.val;
-            } else if ("raw" in entrada) {
-                const raw = entrada.raw;
-                date = new Date(dateRegex.exec(raw)[0]).getTime();
-                const result = catRegex.exec(raw);
-                category = result[1] + ' ' + result[2];
-                value = entrada.val;
-            }
-
-            const pieDataMatches = pieData.filter(serie => serie.name == category)
-            if (pieDataMatches.length >= 1) {
-                coincidencia = pieDataMatches[0];
-                if (coincidencia.date == date) {
-                    coincidencia.value += value;
-                }
-            } else {
-                pieData.push({
-                    name: category,
-                    y: value
-                })
-            }
-
-            const lineDataMatches = lineSeries.filter(serie => serie.name == category)
-            if (lineDataMatches.length == 1) {
-                lineDataMatches[0].data.push({
-                    x: new Date(date),
-                    y: value,
-                })
-            } else {
-                lineSeries.push({
-                    name: category,
-                    data: [{
-                        x: new Date(date),
-                        y: value,
-                    }]
-                })
-            }
-        }
-
-        function normalize_series(data) {
-            var resultado = data.reduce(normalize_entry, []);
-            return resultado;
-        }
-
-
         function uploadHandler(data) {
+            /* We verify our input is an array */
             if (!Array.isArray(data)) {
                 data = [data]
             }
+            /* We concat the input with the data container array */
             totalData = totalData.concat(data);
+            /* We add 1 to our counter */
             filesLoaded += 1;
-            console.log("totalData: ", totalData)
-            console.log("filesLoaded: ", filesLoaded)
             if (filesLoaded == 3) {
-                normalize_series(totalData);
-                pieData.sort(function (a, b) {
-                    return a - b
-                });
+                /* We execute our normalization procedures for every
+                entry on the array */
+                totalData.reduce((procesadas, entrada) => {
+                    var date;
+                    var category;
+                    var value;
+                    /* Data normalization */
+                    if ("cat" in entrada) {
+                        date = entrada.d;
+                        category = entrada.cat.toUpperCase();
+                        value = entrada.value;
+                    } else if ("categ" in entrada) {
+                        date = new Date(entrada.myDate).getTime();
+                        category = entrada.categ.toUpperCase();
+                        value = entrada.val;
+                    } else if ("raw" in entrada) {
+                        const raw = entrada.raw;
+                        /* We search for a date using our date RegExp */
+                        date = new Date(dateRegex.exec(raw)[0]).getTime();
+                        /* We search for the category using our category RegExp */
+                        const result = catRegex.exec(raw);
+                        /* We tie the pieces together */
+                        category = result[1] + ' ' + result[2];
+                        value = entrada.val;
+                    }
+                    /* We verify if the pieData has this category already */
+                    const pieDataMatches = pieData.filter(serie => serie.name == category)
+                    if (pieDataMatches.length >= 1) {
+                        coincidencia = pieDataMatches[0];
+                        if (coincidencia.date == date) {
+                            coincidencia.value += value;
+                        }
+                    } else {
+                        pieData.push({
+                            name: category,
+                            y: value
+                        })
+                    }
+                    /* We verify if the lineData has a series for this category */
+                    const lineDataMatches = lineSeries.filter(serie => serie.name == category)
+                    /* If it does, we add an entry for that series. If not, we add a new
+                    serie for the category */
+                    if (lineDataMatches.length == 1) {
+                        lineDataMatches[0].data.push({
+                            x: new Date(date),
+                            y: value,
+                        })
+                    } else {
+                        lineSeries.push({
+                            name: category,
+                            data: [{
+                                x: new Date(date),
+                                y: value,
+                            }]
+                        })
+                    }
+                }, []);
+                /* We sort the resulting data sets for the line graph */
                 lineSeries = lineSeries.map(function (lineSerie) {
-                    console.log("lineSerie: ", lineSerie)
                     lineSerie.data.sort(function (a, b) {
                         return a.x.getTime() - b.x.getTime()
                     })
-                    console.log("lineSerie: ", lineSerie)
                     return lineSerie;
                 })
-                console.log("lineSeries: ", lineSeries)
-                console.log("pieData: ", pieData)
+                /* We initialize our pie chart */
                 Highcharts.chart('pie', {
                     chart: {
                         type: 'pie'
@@ -138,15 +132,13 @@
                         data: pieData
                     }]
                 });
-
+                /* We initialize our line chart */
                 Highcharts.chart('line', {
-
                     title: {
-                        text: 'Solar Employment Growth by Sector, 2010-2016'
+                        text: 'Devo Challenge Line Chart'
                     },
-
-                    subtitle: {
-                        text: 'Source: thesolarfoundation.com'
+                    xAxis: {
+                        type: 'datetime',
                     },
                     yAxis: {
                         title: {
@@ -160,7 +152,6 @@
                     },
 
                     series: lineSeries,
-
                     responsive: {
                         rules: [{
                             condition: {
@@ -179,8 +170,9 @@
                 });
             }
         }
-
+        
         $(document).ready(function () {
+            /* We obtain the data files */
             $.ajax({
                 dataType: "json",
                 url: "data/data1.json",
