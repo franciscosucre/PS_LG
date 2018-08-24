@@ -25,6 +25,8 @@
         var filesLoaded = 0;
         var totalData = [];
         var categoryTotals = [];
+        var pieData = [];
+        var lineSeries = [];
 
 
         function normalize_entry(procesadas, entrada) {
@@ -47,28 +49,39 @@
                 category = result[1] + ' ' + result[2];
                 value = entrada.val;
             }
-            /* We verify if the category already exists */
-            const coincidencias = procesadas.filter(procesada => procesada.category == category)
-            if (coincidencias.length >= 1) {
-                coincidencia = coincidencias[0];
+
+            const pieDataMatches = pieData.filter(serie => serie.name == category)
+            if (pieDataMatches.length >= 1) {
+                coincidencia = pieDataMatches[0];
                 if (coincidencia.date == date) {
                     coincidencia.value += value;
                 }
-                categoryTotals[category] += value;
             } else {
-                procesadas.push({
-                    date: date,
-                    category: category,
-                    value: value
+                pieData.push({
+                    name: category,
+                    y: value
                 })
-                categoryTotals[category] = value;
             }
-            return procesadas;
+
+            const lineDataMatches = lineSeries.filter(serie => serie.name == category)
+            if (lineDataMatches.length == 1) {
+                lineDataMatches[0].data.push({
+                    x: new Date(date),
+                    y: value,
+                })
+            } else {
+                lineSeries.push({
+                    name: category,
+                    data: [{
+                        x: new Date(date),
+                        y: value,
+                    }]
+                })
+            }
         }
 
         function normalize_series(data) {
             var resultado = data.reduce(normalize_entry, []);
-            console.log("resultado: ", resultado);
             return resultado;
         }
 
@@ -77,25 +90,27 @@
             if (!Array.isArray(data)) {
                 data = [data]
             }
-            data = normalize_series(data);
             totalData = totalData.concat(data);
             filesLoaded += 1;
             console.log("totalData: ", totalData)
             console.log("filesLoaded: ", filesLoaded)
             if (filesLoaded == 3) {
-                const pieData = [];
-                for (const key in categoryTotals) {
-                    if (categoryTotals.hasOwnProperty(key)) {
-                        pieData.push(categoryTotals[key]);
-                    }
-                }
-                console.log("categoryTotals: ", categoryTotals)
+                normalize_series(totalData);
+                pieData.sort(function (a, b) {
+                    return a - b
+                });
+                lineSeries = lineSeries.map(function (lineSerie) {
+                    console.log("lineSerie: ", lineSerie)
+                    lineSerie.data.sort(function (a, b) {
+                        return a.x.getTime() - b.x.getTime()
+                    })
+                    console.log("lineSerie: ", lineSerie)
+                    return lineSerie;
+                })
+                console.log("lineSeries: ", lineSeries)
                 console.log("pieData: ", pieData)
                 Highcharts.chart('pie', {
                     chart: {
-                        plotBackgroundColor: null,
-                        plotBorderWidth: null,
-                        plotShadow: false,
                         type: 'pie'
                     },
                     title: {
@@ -133,10 +148,9 @@
                     subtitle: {
                         text: 'Source: thesolarfoundation.com'
                     },
-
                     yAxis: {
                         title: {
-                            text: 'Number of Employees'
+                            text: 'Value'
                         }
                     },
                     legend: {
@@ -145,31 +159,7 @@
                         verticalAlign: 'middle'
                     },
 
-                    plotOptions: {
-                        series: {
-                            label: {
-                                connectorAllowed: false
-                            },
-                            pointStart: 2010
-                        }
-                    },
-
-                    series: [{
-                        name: 'Installation',
-                        data: [43934, 52503, 57177, 69658, 97031, 119931, 137133, 154175]
-                    }, {
-                        name: 'Manufacturing',
-                        data: [24916, 24064, 29742, 29851, 32490, 30282, 38121, 40434]
-                    }, {
-                        name: 'Sales & Distribution',
-                        data: [11744, 17722, 16005, 19771, 20185, 24377, 32147, 39387]
-                    }, {
-                        name: 'Project Development',
-                        data: [null, null, 7988, 12169, 15112, 22452, 34400, 34227]
-                    }, {
-                        name: 'Other',
-                        data: [12908, 5948, 8105, 11248, 8989, 11816, 18274, 18111]
-                    }],
+                    series: lineSeries,
 
                     responsive: {
                         rules: [{
