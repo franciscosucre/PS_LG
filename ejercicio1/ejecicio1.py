@@ -1,29 +1,41 @@
 import sys
 
-def factores(entero):
-    candidatos = [candidato for candidato in range(1, entero)]
-    es_divisor = lambda candidato : not (entero % candidato)
-    return filter(es_divisor, candidatos)
 
-def es_perfect_abundante_o_perfecto(entero):
-    if entero == 0 or entero == 1:
-        print "%d es un caso especial!" % entero
-        return
-    factores_entero = factores(entero)
-    suma_factores = sum(factores_entero)
+def factors(integer):
+    """Return a list of numbers that are factors of an 
+    given integer
+    """
+    # We return the list 
+    return [candidate for candidate in range(1, integer) if not integer % candidate]
 
-    if suma_factores < entero:
-        print "%d es defectivo!" % entero
-    elif suma_factores == entero:
-        print "%d es perfecto!" % entero
-    elif suma_factores > entero:
-        print "%d es abundante!" % entero
+
+def is_perfect_abundant_or_defective(integer):
+    """Prints a message for the user defining if a given integer is
+    perfect, abundant or defective
+    """
+    # The numbers 0 and 1 
+    if integer == 0 or integer == 1:
+        print "%d is a special case!" % integer
     else:
-        print "%d NO es ni defectivo, perfecto o abundante!" % entero
+        # We obtain the factors
+        integer_factors = factors(integer)
+        # We obtain the sum of the factors
+        sum_factors = sum(integer_factors)
+        # If the sum is less than the integer, then it is defective
+        if sum_factors < integer:
+            print "%d is defective!" % integer
+        # If the sum is equal than the integer, then it is perfect
+        elif sum_factors == integer:
+            print "%d is perfect!" % integer
+        # If the sum is greater than the integer, then it is abundant
+        elif sum_factors > integer:
+            print "%d is abundant!" % integer
+
 
 def main():
     enteros = map(int, sys.argv[1:])
-    map(es_perfect_abundante_o_perfecto, enteros)
+    map(is_perfect_abundant_or_defective, enteros)
+
 
 if __name__ == "__main__":
     main()
